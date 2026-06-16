@@ -2,7 +2,6 @@ package main
 // TODO:
 /*
 	*IMPORTANT:
-
 	check if its a http request
  	reformat the received string into a struct 
 	make routing work
@@ -15,7 +14,37 @@ package main
 import "core:fmt"
 import "core:net"
 import "core:thread"
+import "core:strings"
+// TODO: FIX THIS 
+HttpResponse :: struct {
+	method: string,
+	url: string,
+	type: string,
+	host: string,
+	user_agent: string,
+	accept: string,
+	accept_language: string,
+	referer: string,
+	path: string,
+}
 
+format_http_response :: proc(str: string) -> HttpResponse {
+	r : HttpResponse
+	i := 0
+    parts := strings.split(str, "\r\n")
+	fmt.println("PARTS: \n")
+    for part in parts {
+        fmt.println(part)
+		if len(part) > 0 {
+			if part[0] == 'G' && part[1] == 'E' {
+				// TODO: THIS SETS PATH ONLY WHEN A REFERER IS SET. FIX THE FIRST GET /path to make the path work correctly 
+				r.path = strings.split(part, " ")[1];
+				// fmt.printfln("\n\n\nPATH: %s\n\n\n",r.path)
+        	}  
+		}
+	}
+	return r
+}
 is_ctrl_d :: proc(bytes: []u8) -> bool {
 	return len(bytes) == 1 && bytes[0] == 4
 }
@@ -55,9 +84,16 @@ handle_msg :: proc(sock: net.TCP_Socket) {
 			break
 		}
 		// TODO: REFORMAT THIS INTO A STRUCT
-		fmt.printfln("Server received [ %d bytes ]: %s", len(received), received)
+		fmt.printfln("Server received [ %d bytes ]: \n%s", len(received), received)
 		// fmt.printfln("Server %s", received)
-		body := "Hello from Odin HTTP!"
+
+		req_struct := format_http_response(string(received))
+		body : string
+		if req_struct.path == "/hi" {
+			body = "HIIIIIII"
+		} else {
+			body = "Hello from Odin HTTP!"
+		}
 		
 		response := fmt.aprintf(
 			"HTTP/1.1 200 OK\r\n" +
@@ -74,7 +110,7 @@ handle_msg :: proc(sock: net.TCP_Socket) {
 			fmt.println("Failed to send data")
 		}
 		sent := received[:bytes_sent]
-		fmt.printfln("Server sent [ %d bytes ]: %s", len(sent), sent)
+		fmt.printfln("\n\nServer sent [ %d bytes ]: %s", len(sent), sent)
 	}
 	net.close(sock)
 }
